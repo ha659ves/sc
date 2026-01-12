@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>图片作品集</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f5f6fa; color: #222; }
+    header { padding: 16px 20px; font-size: 20px; font-weight: 600; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.05); position: sticky; top: 0; z-index: 2; }
+    main { padding: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .card { position: relative; overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.08); cursor: pointer; min-height: 160px; }
+    .card img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s ease; }
+    .card:hover img { transform: scale(1.04); }
+    .card .title { position: absolute; left: 10px; bottom: 10px; padding: 4px 8px; background: rgba(0,0,0,.55); color: #fff; border-radius: 6px; font-size: 12px; backdrop-filter: blur(4px); }
+    .msg { text-align: center; padding: 40px 12px; color: #777; }
+    .lightbox { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.78); z-index: 5; }
+    .lightbox.active { display: flex; }
+    .lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.45); background: #fff; }
+    .close { position: absolute; top: 18px; right: 24px; font-size: 32px; color: #fff; cursor: pointer; line-height: 1; }
+  </style>
+</head>
+<body>
+  <header>图片作品集</header>
+  <main>
+    <div id="message" class="msg">加载中...</div>
+    <div id="grid" class="grid" aria-live="polite"></div>
+  </main>
+
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true">
+    <span id="close" class="close" aria-label="关闭">×</span>
+    <img id="full" alt="">
+  </div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const msg = document.getElementById('message');
+    const lightbox = document.getElementById('lightbox');
+    const full = document.getElementById('full');
+    const closeBtn = document.getElementById('close');
+
+    const hideMsg = () => { msg.textContent = ''; msg.style.display = 'none'; };
+
+    const showMsg = (text) => {
+      msg.style.display = 'block';
+      msg.textContent = text;
+    };
+
+    const render = (items) => {
+      if (!items.length) {
+        showMsg('暂无图片，请上传 images/ 下的缩略图与原图并更新 gallery.json');
+        return;
+      }
+      hideMsg();
+      items.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const title = item.title || '';
+        card.innerHTML = `
+          <img loading="lazy" src="${item.thumb}" alt="${title}">
+          <span class="title">${title}</span>
+        `;
+        card.onclick = () => {
+          full.src = item.full;
+          full.alt = title;
+          lightbox.classList.add('active');
+        };
+        grid.appendChild(card);
+      });
+    };
+
+    const load = async () => {
+      try {
+        const res = await fetch('gallery.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error('gallery.json 加载失败');
+        const data = await res.json();
+        render(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        showMsg('无法加载 gallery.json，请确认文件已上传且格式正确');
+      }
+    };
+
+    closeBtn.onclick = () => lightbox.classList.remove('active');
+    lightbox.onclick = (e) => { if (e.target === lightbox) lightbox.classList.remove('active'); };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lightbox.classList.remove('active'); });
+
+    load();
+  </script>
+</body>
+</html>
